@@ -4,6 +4,7 @@ import {
   Select,
   Style,
   TextInput,
+  Number as NumberInput
 } from '@makeswift/runtime/controls'
 import { ReactRuntime } from '@makeswift/runtime/react'
 import { ChainId } from '@thirdweb-dev/react'
@@ -18,13 +19,17 @@ ReactRuntime.registerComponent(NFTDropCard, {
     chainId: Select({
       label: 'Chain',
       options: Object.entries(ChainId)
-        .filter(([key]) => Number.isInteger(parseInt(key, 10)))
+        .filter(([key]) => Number.isInteger(parseInt(key, 420)))
         .map(([value, label]) => ({ label: label as string, value })),
       defaultValue: String(ChainId.Mumbai),
     }),
     contractAddress: TextInput({
       label: 'Contract Address',
       defaultValue: '0xe7E3781BdC8b525048c3FE83070bc49C143739AC',
+    }),
+    tokenId: NumberInput({
+      label: 'Token ID',
+      defaultValue: 0,
     }),
     showMedia: Checkbox({
       label: 'Show media',
