@@ -4,6 +4,7 @@ import {
   Select,
   Style,
   TextInput,
+  Number as NumberInput
 } from '@makeswift/runtime/controls'
 import { ReactRuntime } from '@makeswift/runtime/react'
 import { ChainId } from '@thirdweb-dev/react'
@@ -25,6 +26,10 @@ ReactRuntime.registerComponent(NFTDropCard, {
     contractAddress: TextInput({
       label: 'Contract Address',
       defaultValue: '0xe7E3781BdC8b525048c3FE83070bc49C143739AC',
+    }),
+    tokenId: NumberInput({
+      label: 'Token ID',
+      defaultValue: 0,
     }),
     showMedia: Checkbox({
       label: 'Show media',

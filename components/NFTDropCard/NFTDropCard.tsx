@@ -1,20 +1,19 @@
 import {
-  useClaimedNFTSupply,
-  useContractMetadata,
-  useUnclaimedNFTSupply,
-  useActiveClaimCondition,
   useClaimNFT,
+  useNFT,
   useWalletConnect,
   useCoinbaseWallet,
   useAddress,
   useMetamask,
   useBalance,
-  MediaRenderer,
   useDisconnect,
   useNetworkMismatch,
   useNetwork,
   useClaimIneligibilityReasons,
   useContract,
+  useActiveClaimConditionForWallet,
+  useTotalCirculatingSupply,
+  ThirdwebNftMedia
 } from '@thirdweb-dev/react'
 import {
   useToast,
@@ -61,7 +60,8 @@ type Props = {
   chainId?: string
   showMedia?: boolean
   showDescription?: boolean
-  totalClaimed?: 'nototal' | 'total' | 'max' | 'available'
+  totalClaimed?: 'nototal' | 'total' | 'max' | 'available',
+  tokenId: number
 }
 
 const NFTDropCard = forwardRef(function NFTDropCard(
@@ -72,36 +72,41 @@ const NFTDropCard = forwardRef(function NFTDropCard(
     showMedia,
     showDescription,
     totalClaimed,
+    tokenId
   }: Props,
   ref: Ref<HTMLDivElement>,
 ) {
   const toast = useToast()
-  const { contract: nftDrop } = useContract(contractAddress, 'nft-drop')
+  const { contract: editionDrop } = useContract(contractAddress)
   const address = useAddress()
   const balance = useBalance()
   const connectWithMetamask = useMetamask()
   const connectWithWalletConnect = useWalletConnect()
   const connectWithCoinbaseWallet = useCoinbaseWallet()
   const disconnectWallet = useDisconnect()
-  const claimNFT = useClaimNFT(nftDrop)
+  const claimNFT = useClaimNFT(editionDrop)
   const isOnWrongNetwork = useNetworkMismatch()
   const [, switchNetwork] = useNetwork()
   // The amount the user claims
   const [quantity, setQuantity] = useState<number>(1) // default to 1
-  const claimIneligibilityReasons = useClaimIneligibilityReasons(nftDrop, {
+  const claimIneligibilityReasons = useClaimIneligibilityReasons(editionDrop, {
     quantity,
     walletAddress: address ?? '',
   })
 
   // Load contract metadata
-  const { data: contractMetadata } = useContractMetadata(nftDrop)
+  const { data: nft, isLoading, error } = useNFT(editionDrop, tokenId);
 
   // Load claimed supply and unclaimed supply
-  const { data: unclaimedSupply } = useUnclaimedNFTSupply(nftDrop)
-  const { data: claimedSupply } = useClaimedNFTSupply(nftDrop)
+  const { data: claimedSupply } = useTotalCirculatingSupply(editionDrop, tokenId);
 
   // Load the active claim condition
-  const { data: activeClaimCondition } = useActiveClaimCondition(nftDrop)
+  const { data: activeClaimCondition } = useActiveClaimConditionForWallet(
+    editionDrop,
+    address,
+    tokenId
+  );
+  const availableSupply = (activeClaimCondition?.availableSupply === 'unlimited' ? 1000 : (isNaN(Number(activeClaimCondition?.availableSupply)) ? Number(activeClaimCondition?.availableSupply) : 0));
 
   const quantityLimitPerWallet = activeClaimCondition?.maxClaimablePerWallet
 
@@ -122,11 +127,11 @@ const NFTDropCard = forwardRef(function NFTDropCard(
 
   const lowerMaxClaimable = Math.min(
     maxClaimable,
-    unclaimedSupply?.toNumber() || 1000,
+    availableSupply,
   )
 
   // Check if there's any NFTs left
-  const isSoldOut = unclaimedSupply?.toNumber() === 0
+  const isSoldOut = availableSupply === 0
 
   const canClaim =
     !isSoldOut &&
@@ -146,7 +151,7 @@ const NFTDropCard = forwardRef(function NFTDropCard(
   const priceToMint = price.mul(quantity)
 
   // Loading state while we fetch the metadata
-  if (!nftDrop || !contractMetadata) {
+  if (!editionDrop || !nft) {
     return (
       <Flex justify="center" className={className} p={10}>
         <Spinner className="text-black text-opacity-50 stroke-current rotate" />
@@ -156,7 +161,7 @@ const NFTDropCard = forwardRef(function NFTDropCard(
 
   // Add claimed and unclaimed supply
   const claimedSubTotal = claimedSupply?.toNumber() || 0
-  const unclaimedSubTotal = unclaimedSupply?.toNumber() || 0
+  const unclaimedSubTotal = availableSupply
   const totalSupply = claimedSubTotal + unclaimedSubTotal
 
   // Function to mint/claim an NFT
@@ -173,9 +178,8 @@ const NFTDropCard = forwardRef(function NFTDropCard(
 
       return
     }
-
     claimNFT.mutate(
-      { to: address as string, quantity },
+      { to: address as string, quantity, tokenId },
       {
         onSuccess: () => {
           toast({
@@ -186,7 +190,7 @@ const NFTDropCard = forwardRef(function NFTDropCard(
         onError: (err: any) => {
           toast({
             title: `Error minting NFT${quantity > 1 ? 's' : ''}`,
-            description: err?.message || 'Something went wrong.',
+            description: err?.message?.includes("user rejected transaction") ? "Transaction Rejected" : (err?.message || 'Something went wrong.'),
             status: 'error',
           })
         },
@@ -197,14 +201,10 @@ const NFTDropCard = forwardRef(function NFTDropCard(
   return (
     <Grid className={className} ref={ref}>
       <Grid gap={8}>
-        {showMedia && (
+        {showMedia && nft && (
           <Flex justify="center">
-            <MediaRenderer
-              className="w[240px] h[240px]"
-              width="240"
-              height="240"
-              src={contractMetadata?.image}
-              alt={`${contractMetadata?.name} preview image`}
+            <ThirdwebNftMedia
+              metadata={nft.metadata}
             />
           </Flex>
         )}
@@ -212,11 +212,11 @@ const NFTDropCard = forwardRef(function NFTDropCard(
         <Grid gap={5}>
           <Grid gap={3}>
             <Text as="h2" fontSize="3xl" fontWeight="semibold">
-              {contractMetadata?.name}
+              {nft?.metadata.name}
             </Text>
             {showDescription && (
               <Text as="p" fontSize="md">
-                {contractMetadata?.description}
+                {nft?.metadata?.description}
               </Text>
             )}
           </Grid>
@@ -225,7 +225,7 @@ const NFTDropCard = forwardRef(function NFTDropCard(
               <Divider />
               <Flex justify="center">
                 {(claimedSupply &&
-                  unclaimedSupply &&
+                  availableSupply &&
                   totalClaimed == 'total') ||
                 totalClaimed == 'max' ? (
                   <Text as="p" fontSize="md">
