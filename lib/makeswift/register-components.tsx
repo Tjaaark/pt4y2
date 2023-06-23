@@ -19,7 +19,7 @@ ReactRuntime.registerComponent(NFTDropCard, {
     chainId: Select({
       label: 'Chain',
       options: Object.entries(ChainId)
-        .filter(([key]) => Number.isInteger(parseInt(key, 420)))
+        .filter(([key]) => Number.isInteger(parseInt(key, 10)))
         .map(([value, label]) => ({ label: label as string, value })),
       defaultValue: String(ChainId.Mumbai),
     }),
