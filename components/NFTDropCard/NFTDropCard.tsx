@@ -467,6 +467,7 @@ const NFTDropCardProvider = forwardRef(function NFTDropCardProvider(
     showMedia,
     showDescription,
     totalClaimed,
+    tokenId
   }: ProviderProps,
   ref: Ref<HTMLDivElement>,
 ) {
