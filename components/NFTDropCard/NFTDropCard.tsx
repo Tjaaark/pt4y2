@@ -539,6 +539,7 @@ const NFTDropCardProvider = forwardRef(function NFTDropCardProvider(
           ref={ref}
           className={className}
           contractAddress={contractAddress}
+          tokenId={tokenId}
           chainId={chainId}
           showMedia={showMedia}
           showDescription={showDescription}
