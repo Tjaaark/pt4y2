@@ -106,7 +106,7 @@ const NFTDropCard = forwardRef(function NFTDropCard(
     address,
     tokenId
   );
-  const availableSupply = (activeClaimCondition?.availableSupply === 'unlimited' ? 1000 : (isNaN(Number(activeClaimCondition?.availableSupply)) ? Number(activeClaimCondition?.availableSupply) : 0));
+  const availableSupply = (activeClaimCondition?.availableSupply === 'unlimited' ? 1000 : (isNaN(Number(activeClaimCondition?.availableSupply)) ? 0 : Number(activeClaimCondition?.availableSupply)));
 
   const quantityLimitPerWallet = activeClaimCondition?.maxClaimablePerWallet
 
@@ -188,9 +188,16 @@ const NFTDropCard = forwardRef(function NFTDropCard(
           })
         },
         onError: (err: any) => {
+          let message = err?.message || 'Something went wrong.';
+          if(err?.message?.includes("user rejected transaction")) {
+            message = "Transaction Rejected";
+          }
+          if(err?.message?.includes("!Qty")) {
+            message = "Mint exceeds max allowed";
+          }
           toast({
             title: `Error minting NFT${quantity > 1 ? 's' : ''}`,
-            description: err?.message?.includes("user rejected transaction") ? "Transaction Rejected" : (err?.message || 'Something went wrong.'),
+            description: message,
             status: 'error',
           })
         },
